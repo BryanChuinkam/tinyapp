@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/BryanChuinkam/tinyapp/issues"
   },
-  "homepage": "https://github.com/BryanChuinkam/tinyapp#readme"
+  "homepage": "https://github.com/BryanChuinkam/tinyapp#readme",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
 }
