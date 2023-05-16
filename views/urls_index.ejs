@@ -24,14 +24,19 @@
       </thead>
       <tbody>
         <% for (let id in urls) { %>
-          <tr>
-            <td>
-              <%= id %>
-            </td>
-            <td>
-              <%= urls[id] %>
-            </td>
-          </tr>
+          <form method="POST" action= "/urls/<%=id%>/delete">
+            <tr>
+              <td>
+                <%= id %>
+              </td>
+              <td>
+                <%= urls[id] %>
+              </td>
+              <td>
+                <button type="submit" class="btn btn-outline-danger">Delete</button>
+              </td>
+            </tr>
+        </form>
           <% } %>
       </tbody>
     </table>

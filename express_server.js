@@ -14,12 +14,12 @@ const urlDatabase = {
 const generateRandomString = () => {
   let output = "";
   const letters = "abcdefghijklmnopqrstuvwxyz";
-  
+
   for (let count = 0; count <= 5; count++) {
-  	let letterIndex = Math.floor(Math.random() * 26);
+    let letterIndex = Math.floor(Math.random() * 26);
     output += letters[letterIndex];
   }
-  
+
   return output;
 };
 
@@ -49,9 +49,14 @@ app.get("/urls/:id", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  const id = generateRandomString(); 
-  urlDatabase[id] = req.body.longURL; 
-  res.redirect(`/urls/${id}`)
+  const id = generateRandomString();
+  urlDatabase[id] = req.body.longURL;
+  res.redirect(`/urls/${id}`);
+});
+
+app.post("/urls/:id/delete", (req, res) => {
+  delete urlDatabase[req.params.id];
+  res.redirect(`/urls`);
 });
 
 app.listen(PORT, () => {
