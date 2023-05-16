@@ -65,9 +65,12 @@ app.post("/urls/:id/overhaul", (req, res) => {
 });
 
 app.post("/urls/:id/update", (req, res) => {
-  // console.log('params: ', req.params.id);
-  // console.log('body: ', req.body);
   urlDatabase[req.params.id] = req.body.newURL;
+  res.redirect(`/urls`);
+});
+
+app.post("/login", (req, res) => {
+  res.cookie('username', req.body.username) ;
   res.redirect(`/urls`);
 });
 
