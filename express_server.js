@@ -45,15 +45,13 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/urls/:id", (req, res) => {
-  const templateVars = { idShort: req.params.id, longURL: urlDatabase[req.params.id] };
-  res.render("urls_show", templateVars);
+  res.redirect(urlDatabase[req.params.id]);
 });
 
 app.post("/urls", (req, res) => {
-  console.log(req.body); 
   const id = generateRandomString(); 
   urlDatabase[id] = req.body.longURL; 
-  res.redirect(`/urls/:${id}`)
+  res.redirect(`/urls/${id}`)
 });
 
 app.listen(PORT, () => {
