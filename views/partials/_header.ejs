@@ -5,28 +5,32 @@
       aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
-    
+
     <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
       <div class="navbar-nav">
         <a class="nav-item nav-link" href="/urls">My URLs</a>
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
+        <a class="nav-item nav-link" href="/register">Register New user</a>
       </div>
-      <% if(username){ %>
-        <div><%= username %></div>
+      <% if(user){ %>
+        <div style=" margin-left: 1em; margin-right: 1em;">
+          <%= user.email %>
+        </div>
         <div style="align-items: right;">
           <form class="form-inline my-2 my-lg-0" action="/logout" method="POST">
             <button class="btn btn-outline-dark my-2 my-sm-0" type="submit">Logout</button>
           </form>
         </div>
-      <% } else{ %>  
-        <div style="align-items: right;">
-          <form class="form-inline my-2 my-lg-0" action="/login" method="POST">
-            <input class="form-control mr-sm-2" type="text" placeholder="Username" name="username" aria-label="Search">
-            <button class="btn btn-outline-dark my-2 my-sm-0" type="submit">Login</button>
-          </form>
-        </div>
-     <% } %>
-      
+        <% } else{ %>
+          <div style="align-items: right;">
+            <form class="form-inline my-2 my-lg-0" action="/login" method="POST">
+              <input style=" margin-left: 1em;margin-right: 1em" class="form-control mr-sm-2" type="text"
+                placeholder="email" name="email" aria-label="Search">
+              <button class="btn btn-outline-dark my-2 my-sm-0" type="submit">Login</button>
+            </form>
+          </div>
+          <% } %>
+
     </div>
   </nav>
 </header>

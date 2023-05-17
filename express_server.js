@@ -2,7 +2,7 @@ const express = require("express");
 const app = express();
 const PORT = 8080;
 const cookieParser = require('cookie-parser');
-const morgan = require('morgan'); 
+const morgan = require('morgan');
 
 //MIDDLEWARE
 app.set("view engine", "ejs");
@@ -14,6 +14,8 @@ const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+
+const users = {};
 
 
 const generateRandomString = () => {
@@ -28,26 +30,56 @@ const generateRandomString = () => {
   return output;
 };
 
+// Affects USERS
+app.get("/register", (req, res) => {
+  const userObj = users[req.cookies.user_id]
+  const templateVars = { user: userObj, urls: urlDatabase };
+  res.render("registration", templateVars);
+});
 
+app.post("/register", (req, res) => {
+  id = generateRandomString();
+  users[id] = {
+    id,
+    email: req.body.email,
+    password: req.body.password,
+  };
+  res.cookie('user_id', id);
+  console.log('users: ', users);
+  res.redirect("/urls");
+});
+
+app.post("/login", (req, res) => {
+  res.redirect(`/urls`);
+});
+
+app.post("/logout", (req, res) => {
+  res.clearCookie('user_id');
+  res.redirect(`/urls`);
+});
+
+
+
+
+
+//Affects long/short URLS 
 app.get("/urls", (req, res) => {
-  const templateVars = { username: req.cookies["username"], urls: urlDatabase };
+  console.log('cookies in get url: ', req.cookies);
+  const userObj = users[req.cookies.user_id]
+  const templateVars = { user: userObj, urls: urlDatabase };
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  const templateVars = { username: req.cookies["username"] };
+  const userObj = users[req.cookies.user_id]
+  const templateVars = { user: userObj };
   res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
-  const templateVars = { idShort: req.params.id, longURL: urlDatabase[req.params.id],  username: req.cookies["username"] };
+  const templateVars = { idShort: req.params.id, longURL: urlDatabase[req.params.id], username: req.cookies["username"] };
   res.render("urls_show", templateVars);
   // res.redirect(urlDatabase[req.params.id]);
-});
-
-app.get("/register", (req, res) => {
-  const templateVars = { username: req.cookies["username"], urls: urlDatabase };
-  res.render("registration", templateVars);
 });
 
 app.post("/urls", (req, res) => {
@@ -69,19 +101,6 @@ app.post("/urls/:id/update", (req, res) => {
   res.redirect(`/urls`);
 });
 
-app.post("/login", (req, res) => {
-  res.cookie('username', req.body.username);
-  res.redirect(`/urls`);
-});
-
-app.post("/logout", (req, res) => {
-  res.clearCookie('username');
-  res.redirect(`/urls`);
-});
-
-app.post("/register", (req, res) => {
-  res.send("registration happpening"); //placeholder
-});
 
 
 //NOT PART OF CORE FUNCTIONALITY
