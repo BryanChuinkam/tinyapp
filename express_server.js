@@ -68,13 +68,19 @@ app.post("/register", (req, res) => {
  
 });
 
+app.get("/login", (req, res) => {
+  const userObj = users[req.cookies.user_id]
+  const templateVars = { user: userObj, urls: urlDatabase };
+  res.render("login", templateVars);
+});
+
 app.post("/login", (req, res) => {
   res.redirect(`/urls`);
 });
 
 app.post("/logout", (req, res) => {
   res.clearCookie('user_id');
-  res.redirect(`/urls`);
+  res.redirect(`/login`);
 });
 
 
