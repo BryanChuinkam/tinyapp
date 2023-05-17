@@ -30,6 +30,16 @@ const generateRandomString = () => {
   return output;
 };
 
+const userExist = (userEmail, users) => {
+  // returns true if email has already been registered
+  for(const user in users){
+  	if(userEmail === users[user].email){
+    	return true; 
+    }
+  }
+	return false; 
+}
+
 // Affects USERS
 app.get("/register", (req, res) => {
   const userObj = users[req.cookies.user_id]
@@ -38,15 +48,24 @@ app.get("/register", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
+  if (!req.body.email || !req.body.password){
+    res.statusCode = 404; 
+    return res.send("Please enter valid email/password!!")
+  }
+  if(userExist(req.body.email, users)){
+    res.statusCode = 400; 
+    return res.send("Please user a different email!!")
+  }
   id = generateRandomString();
   users[id] = {
     id,
     email: req.body.email,
     password: req.body.password,
   };
+
   res.cookie('user_id', id);
-  console.log('users: ', users);
-  res.redirect("/urls");
+  return res.redirect("/urls");
+ 
 });
 
 app.post("/login", (req, res) => {
@@ -64,7 +83,7 @@ app.post("/logout", (req, res) => {
 
 //Affects long/short URLS 
 app.get("/urls", (req, res) => {
-  console.log('cookies in get url: ', req.cookies);
+  console.log("users: ", users);
   const userObj = users[req.cookies.user_id]
   const templateVars = { user: userObj, urls: urlDatabase };
   res.render("urls_index", templateVars);
