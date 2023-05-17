@@ -2,15 +2,19 @@ const express = require("express");
 const app = express();
 const PORT = 8080;
 const cookieParser = require('cookie-parser');
+const morgan = require('morgan'); 
 
+//MIDDLEWARE
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(morgan('dev'));
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+
 
 const generateRandomString = () => {
   let output = "";
@@ -41,6 +45,11 @@ app.get("/urls/:id", (req, res) => {
   // res.redirect(urlDatabase[req.params.id]);
 });
 
+app.get("/register", (req, res) => {
+  const templateVars = { username: req.cookies["username"], urls: urlDatabase };
+  res.render("registration", templateVars);
+});
+
 app.post("/urls", (req, res) => {
   const id = generateRandomString();
   urlDatabase[id] = req.body.longURL;
@@ -68,6 +77,10 @@ app.post("/login", (req, res) => {
 app.post("/logout", (req, res) => {
   res.clearCookie('username');
   res.redirect(`/urls`);
+});
+
+app.post("/register", (req, res) => {
+  res.send("registration happpening"); //placeholder
 });
 
 
