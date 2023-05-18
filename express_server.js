@@ -3,6 +3,9 @@ const app = express();
 const PORT = 8080;
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
+const { urlDatabase, usersDB } = require("./databases");
+const { generateRandomString, userExist, validEmailAndPass, passwordAndEmailMatch, urlIDExist, urlsForUser } = require("./functions");
+
 
 //MIDDLEWARE
 app.set("view engine", "ejs");
@@ -10,71 +13,16 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(morgan('dev'));
 
-const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
-};
-
-const users = {};
 
 
-const generateRandomString = () => {
-  let output = "";
-  const letters = "abcdefghijklmnopqrstuvwxyz";
 
-  for (let count = 0; count <= 5; count++) {
-    let letterIndex = Math.floor(Math.random() * 26);
-    output += letters[letterIndex];
-  }
-
-  return output;
-};
-
-const userExist = (userEmail, users) => {
-  // returns true if email has already been registered
-  for (const user in users) {
-    if (userEmail === users[user].email) {
-      return true;
-    }
-  }
-  return false;
-};
-
-const validEmailAndPass = (userEmail, password) => {
-  // Returns true of valid email and password are entered
-  // for now just ensures empty strings are not passed.
-  if (!userEmail || !password) {
-    return false;
-  }
-  return true;
-};
-
-const passwordAndEmailMatch = (userEmail, password, users) => {
-  // returns user id if password matches password that was registered with email
-  for (const user in users) {
-    if ((userEmail === users[user].email) && (password === users[user].password)) {
-      return users[user].id;
-    }
-  }
-  return 'none';
-};
-
-const urlIDExist = (urlId, urlDatabase) => {
-  // returns true if urlID is found in urlDatabase
-  const objKeys = Object.keys(urlDatabase);
-  if (objKeys.includes(urlId)) {
-    return true;
-  }
-  return false;
-};
-
-// Affects USERS access
+// Affects usersDB access
 app.get("/register", (req, res) => {
   if (req.cookies.user_id) {
     return res.redirect("/urls");
   }
 
-  const userObj = users[req.cookies.user_id];
+  const userObj = usersDB[req.cookies.user_id];
   const templateVars = { user: userObj, urls: urlDatabase };
   res.render("registration", templateVars);
 });
@@ -84,12 +32,12 @@ app.post("/register", (req, res) => {
     res.statusCode = 404;
     return res.send("Please enter valid email/password!!");
   }
-  if (userExist(req.body.email, users)) {
+  if (userExist(req.body.email, usersDB)) {
     res.statusCode = 400;
     return res.send("Please user a different email!!");
   }
   const id = generateRandomString();
-  users[id] = {
+  usersDB[id] = {
     id: id,
     email: req.body.email,
     password: req.body.password,
@@ -104,7 +52,7 @@ app.get("/login", (req, res) => {
   if (req.cookies.user_id) {
     return res.redirect("/urls");
   }
-  const userObj = users[req.cookies.user_id];
+  const userObj = usersDB[req.cookies.user_id];
   const templateVars = { user: userObj, urls: urlDatabase };
   res.render("login", templateVars);
 });
@@ -114,13 +62,13 @@ app.post("/login", (req, res) => {
     res.statusCode = 404;
     return res.send("Please enter valid email/password!!");
   }
-  if (!userExist(req.body.email, users)) {
+  if (!userExist(req.body.email, usersDB)) {
     res.statusCode = 403;
     return res.send("Please register before logging in!!!");
   }
-  const id = passwordAndEmailMatch(req.body.email, req.body.password, users);
+  const id = passwordAndEmailMatch(req.body.email, req.body.password, usersDB);
 
-  if (passwordAndEmailMatch(req.body.email, req.body.password, users) === 'none') {
+  if (passwordAndEmailMatch(req.body.email, req.body.password, usersDB) === 'none') {
     res.statusCode = 403;
     return res.send("Something doesn't add up. Please try again!!!");
 
@@ -140,8 +88,14 @@ app.post("/logout", (req, res) => {
 
 //Affects long/short URLS
 app.get("/urls", (req, res) => {
-  const userObj = users[req.cookies.user_id];
-  const templateVars = { user: userObj, urls: urlDatabase };
+  if (!req.cookies.user_id) {
+    return res.send("Need to be logged in to do this!!");
+  }
+
+  const userObj = usersDB[req.cookies.user_id];
+  const userUrls = urlsForUser(req.cookies.user_id, urlDatabase);
+  const templateVars = { user: userObj, urls: userUrls };
+
   res.render("urls_index", templateVars);
 });
 
@@ -149,30 +103,54 @@ app.get("/urls/new", (req, res) => {
   if (!req.cookies.user_id) {
     return res.redirect("/login");
   }
-  const userObj = users[req.cookies.user_id];
+  const userObj = usersDB[req.cookies.user_id];
   const templateVars = { user: userObj };
   res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
+  if (!req.cookies.user_id) {
+    return res.send("Need to be logged in to do this!!");
+  }
+
   if (!urlIDExist(req.params.id, urlDatabase)) {
     return res.send("Short URL ID entered could not be found in database.");
   }
-  const userObj = users[req.cookies.user_id];
-  const templateVars = { idShort: req.params.id, longURL: urlDatabase[req.params.id], user: userObj };
+
+  const userURLs = urlsForUser(req.cookies.user_id, urlDatabase); 
+  const userUrlIds = Object.keys(userURLs);
+
+  if(!userUrlIds.includes(req.params.id)){
+    return res.send("Can only access urls associated to your account!")
+  }
+
+ 
+  const userObj = usersDB[req.cookies.user_id];
+  const templateVars = { idShort: req.params.id, longURL: urlDatabase[req.params.id].longURL, user: userObj };
   res.render("urls_show", templateVars);
 });
 
 app.post("/urls", (req, res) => {
   if (!req.cookies.user_id) {
-    return res.resend("Need to be logged in to do this!!");
+    return res.send("Need to be logged in to do this!!");
   }
   const id = generateRandomString();
-  urlDatabase[id] = req.body.longURL;
+  urlDatabase[id].longURL = req.body.longURL;
   res.redirect(`/urls/${id}`);
 });
 
 app.post("/urls/:id/overhaul", (req, res) => {
+  if (!req.cookies.user_id) {
+    return res.send("Need to be logged in to do this!!");
+  }
+
+  const userURLs = urlsForUser(req.cookies.user_id, urlDatabase); 
+  const userUrlIds = Object.keys(userURLs);
+
+  if(!userUrlIds.includes(req.params.id)){
+    return res.send("Can only access urls associated to your account!")
+  }
+
   if (req.body.edit === "edit") {
     return res.redirect(`/urls/${req.params.id}`);
   }
@@ -181,7 +159,18 @@ app.post("/urls/:id/overhaul", (req, res) => {
 });
 
 app.post("/urls/:id/update", (req, res) => {
-  urlDatabase[req.params.id] = req.body.newURL;
+  if (!req.cookies.user_id) {
+    return res.send("Need to be logged in to do this!!");
+  }
+
+  const userURLs = urlsForUser(req.cookies.user_id, urlDatabase); 
+  const userUrlIds = Object.keys(userURLs);
+
+  if(!userUrlIds.includes(req.params.id)){
+    return res.send("Can only access urls associated to your account!")
+  }
+  
+  urlDatabase[req.params.id].longURL = req.body.newURL;
   res.redirect(`/urls`);
 });
 
