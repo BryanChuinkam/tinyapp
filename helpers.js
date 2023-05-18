@@ -52,7 +52,7 @@ const urlIDExist = (urlId, urlDatabase) => {
 
 const urlsForUser = (userID, urlDatabase) => {
   //returns object of the URLs where the userID is equal to the id of the currently logged-in user
-  output = {};
+  let output = {};
 
   for (const urlID in urlDatabase) {
     if (userID === urlDatabase[urlID].userID) {
@@ -61,5 +61,7 @@ const urlsForUser = (userID, urlDatabase) => {
   }
   return output;
 };
+
+
 
 module.exports = { generateRandomString, getUserByEmail, validEmailAndPass, passwordAndEmailMatch, urlIDExist, urlsForUser };

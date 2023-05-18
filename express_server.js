@@ -14,11 +14,10 @@ app.use(cookieSession({ name: 'session', keys: ["bryan"] }));
 app.use(morgan('dev'));
 
 //Databases
-const urlDatabase = {}; 
+const urlDatabase = {};
 const usersDB = {};
 
 
-// Affects usersDB access
 app.get("/register", (req, res) => {
   if (req.session.user_id) {
     return res.redirect("/urls");
@@ -32,11 +31,16 @@ app.get("/register", (req, res) => {
 app.post("/register", (req, res) => {
   if (!validEmailAndPass(req.body.email, req.body.password)) {
     res.statusCode = 404;
-    return res.send("Please enter valid email/password!!");
+    const message = "Please enter valid email/password!!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
   }
+
   if (getUserByEmail(req.body.email, usersDB)) {
     res.statusCode = 400;
-    return res.send("Please user a different email!!");
+    const message = "Please user a different email!!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
   }
   const id = generateRandomString();
   const hashedPassword = bcrypt.hashSync(req.body.password, 10);
@@ -45,7 +49,6 @@ app.post("/register", (req, res) => {
     email: req.body.email,
     password: hashedPassword,
   };
-  console.log("usersDB: register", usersDB);
   req.session.user_id = id;
   return res.redirect("/urls");
 
@@ -63,18 +66,24 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {
   if (!validEmailAndPass(req.body.email, req.body.password)) {
     res.statusCode = 404;
-    return res.send("Please enter valid email/password!!");
+    const message = "Please enter valid email/password!!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
   }
   if (!getUserByEmail(req.body.email, usersDB)) {
     res.statusCode = 403;
-    return res.send("Please register before logging in!!!");
+    const message = "Please register before logging in!!!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
   }
 
   const id = passwordAndEmailMatch(req.body.email, req.body.password, usersDB);
 
   if (passwordAndEmailMatch(req.body.email, req.body.password, usersDB) === 'none') {
     res.statusCode = 403;
-    return res.send("Something doesn't add up. Please try again!!!");
+    const message = "Something doesn't add up. Please try again!!!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
 
   }
   req.session.user_id = id;
@@ -88,16 +97,12 @@ app.post("/logout", (req, res) => {
 });
 
 
-
-
-
-//Affects long/short URLS
+//Routes
 app.get("/urls", (req, res) => {
-  console.log("req.session.user_id /URLS: ", req.session.user_id);
-  console.log("usersDB /URLS:", usersDB);
-
   if (!req.session.user_id) {
-    return res.send("Need to be logged in to do this!!");
+    const message = "Need to be logged in to do this!!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
   }
 
   const userObj = usersDB[req.session.user_id];
@@ -118,18 +123,24 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls/:id", (req, res) => {
   if (!req.session.user_id) {
-    return res.send("Need to be logged in to do this!!");
+    const message = "Need to be logged in to do this!!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
   }
 
   if (!urlIDExist(req.params.id, urlDatabase)) {
-    return res.send("Short URL ID entered could not be found in database.");
+    const message = "Short URL ID entered could not be found in database.";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
   }
 
   const userURLs = urlsForUser(req.session.user_id, urlDatabase);
   const userUrlIds = Object.keys(userURLs);
 
   if (!userUrlIds.includes(req.params.id)) {
-    return res.send("Can only access urls associated to your account!");
+    const message = "Can only access urls associated to your account!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
   }
 
 
@@ -140,7 +151,9 @@ app.get("/urls/:id", (req, res) => {
 
 app.post("/urls", (req, res) => {
   if (!req.session.user_id) {
-    return res.send("Need to be logged in to do this!!");
+    const message = "Need to be logged in to do this!!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
   }
   const id = generateRandomString();
   urlDatabase[id] = { "longURL": req.body.longURL, "userID": req.session.user_id };
@@ -149,14 +162,18 @@ app.post("/urls", (req, res) => {
 
 app.post("/urls/:id/overhaul", (req, res) => {
   if (!req.session.user_id) {
-    return res.send("Need to be logged in to do this!!");
+    const message = "Need to be logged in to do this!!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
   }
 
   const userURLs = urlsForUser(req.session.user_id, urlDatabase);
   const userUrlIds = Object.keys(userURLs);
 
   if (!userUrlIds.includes(req.params.id)) {
-    return res.send("Can only access urls associated to your account!");
+    const message = "Can only access urls associated to your account!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
   }
 
   if (req.body.edit === "edit") {
@@ -168,14 +185,18 @@ app.post("/urls/:id/overhaul", (req, res) => {
 
 app.post("/urls/:id/update", (req, res) => {
   if (!req.session.user_id) {
-    return res.send("Need to be logged in to do this!!");
+    const message = "Need to be logged in to do this!!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
   }
 
   const userURLs = urlsForUser(req.session.user_id, urlDatabase);
   const userUrlIds = Object.keys(userURLs);
 
   if (!userUrlIds.includes(req.params.id)) {
-    return res.send("Can only access urls associated to your account!");
+    const message = "Can only access urls associated to your account!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
   }
 
   urlDatabase[req.params.id].longURL = req.body.newURL;
@@ -183,10 +204,8 @@ app.post("/urls/:id/update", (req, res) => {
 });
 
 
-
-//NOT PART OF CORE FUNCTIONALITY
 app.get("/", (req, res) => {
-  res.send("hello!");
+  return res.render("home", { user: undefined });
 });
 
 
