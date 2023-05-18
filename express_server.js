@@ -2,7 +2,8 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const app = express();
 const PORT = 8080;
-const cookieParser = require('cookie-parser');
+// const cookieParser = require('cookie-parser');
+const cookieSession = require("cookie-session");
 const morgan = require('morgan');
 const { urlDatabase, usersDB } = require("./databases");
 const { generateRandomString, userExist, validEmailAndPass, passwordAndEmailMatch, urlIDExist, urlsForUser } = require("./functions");
@@ -11,7 +12,7 @@ const { generateRandomString, userExist, validEmailAndPass, passwordAndEmailMatc
 //MIDDLEWARE
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use(cookieSession({ name: 'session', keys: ["bryan"] }));
 app.use(morgan('dev'));
 
 
@@ -19,11 +20,11 @@ app.use(morgan('dev'));
 
 // Affects usersDB access
 app.get("/register", (req, res) => {
-  if (req.cookies.user_id) {
+  if (req.session.user_id) {
     return res.redirect("/urls");
   }
 
-  const userObj = usersDB[req.cookies.user_id];
+  const userObj = usersDB[req.session.user_id];
   const templateVars = { user: userObj, urls: urlDatabase };
   res.render("registration", templateVars);
 });
@@ -46,16 +47,16 @@ app.post("/register", (req, res) => {
     password: hashedPassword,
   };
 
-  res.cookie('user_id', id);
+  req.session.user_id = id;
   return res.redirect("/urls");
 
 });
 
 app.get("/login", (req, res) => {
-  if (req.cookies.user_id) {
+  if (req.session.user_id) {
     return res.redirect("/urls");
   }
-  const userObj = usersDB[req.cookies.user_id];
+  const userObj = usersDB[req.session.user_id];
   const templateVars = { user: userObj, urls: urlDatabase };
   res.render("login", templateVars);
 });
@@ -82,7 +83,7 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie('user_id');
+  req.session = null;
   res.redirect(`/login`);
 });
 
@@ -92,28 +93,28 @@ app.post("/logout", (req, res) => {
 
 //Affects long/short URLS
 app.get("/urls", (req, res) => {
-  if (!req.cookies.user_id) {
+  if (!req.session.user_id) {
     return res.send("Need to be logged in to do this!!");
   }
 
-  const userObj = usersDB[req.cookies.user_id];
-  const userUrls = urlsForUser(req.cookies.user_id, urlDatabase);
+  const userObj = usersDB[req.session.user_id];
+  const userUrls = urlsForUser(req.session.user_id, urlDatabase);
   const templateVars = { user: userObj, urls: userUrls };
 
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  if (!req.cookies.user_id) {
+  if (!req.session.user_id) {
     return res.redirect("/login");
   }
-  const userObj = usersDB[req.cookies.user_id];
+  const userObj = usersDB[req.session.user_id];
   const templateVars = { user: userObj };
   res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
-  if (!req.cookies.user_id) {
+  if (!req.session.user_id) {
     return res.send("Need to be logged in to do this!!");
   }
 
@@ -121,38 +122,38 @@ app.get("/urls/:id", (req, res) => {
     return res.send("Short URL ID entered could not be found in database.");
   }
 
-  const userURLs = urlsForUser(req.cookies.user_id, urlDatabase); 
+  const userURLs = urlsForUser(req.session.user_id, urlDatabase);
   const userUrlIds = Object.keys(userURLs);
 
-  if(!userUrlIds.includes(req.params.id)){
-    return res.send("Can only access urls associated to your account!")
+  if (!userUrlIds.includes(req.params.id)) {
+    return res.send("Can only access urls associated to your account!");
   }
 
- 
-  const userObj = usersDB[req.cookies.user_id];
+
+  const userObj = usersDB[req.session.user_id];
   const templateVars = { idShort: req.params.id, longURL: urlDatabase[req.params.id].longURL, user: userObj };
   res.render("urls_show", templateVars);
 });
 
 app.post("/urls", (req, res) => {
-  if (!req.cookies.user_id) {
+  if (!req.session.user_id) {
     return res.send("Need to be logged in to do this!!");
   }
   const id = generateRandomString();
-  urlDatabase[id] = {"longURL": req.body.longURL, "userID": req.cookies.user_id};
+  urlDatabase[id] = { "longURL": req.body.longURL, "userID": req.session.user_id };
   res.redirect(`/urls/${id}`);
 });
 
 app.post("/urls/:id/overhaul", (req, res) => {
-  if (!req.cookies.user_id) {
+  if (!req.session.user_id) {
     return res.send("Need to be logged in to do this!!");
   }
 
-  const userURLs = urlsForUser(req.cookies.user_id, urlDatabase); 
+  const userURLs = urlsForUser(req.session.user_id, urlDatabase);
   const userUrlIds = Object.keys(userURLs);
 
-  if(!userUrlIds.includes(req.params.id)){
-    return res.send("Can only access urls associated to your account!")
+  if (!userUrlIds.includes(req.params.id)) {
+    return res.send("Can only access urls associated to your account!");
   }
 
   if (req.body.edit === "edit") {
@@ -163,15 +164,15 @@ app.post("/urls/:id/overhaul", (req, res) => {
 });
 
 app.post("/urls/:id/update", (req, res) => {
-  if (!req.cookies.user_id) {
+  if (!req.session.user_id) {
     return res.send("Need to be logged in to do this!!");
   }
 
-  const userURLs = urlsForUser(req.cookies.user_id, urlDatabase); 
+  const userURLs = urlsForUser(req.session.user_id, urlDatabase);
   const userUrlIds = Object.keys(userURLs);
 
-  if(!userUrlIds.includes(req.params.id)){
-    return res.send("Can only access urls associated to your account!")
+  if (!userUrlIds.includes(req.params.id)) {
+    return res.send("Can only access urls associated to your account!");
   }
 
   urlDatabase[req.params.id].longURL = req.body.newURL;
