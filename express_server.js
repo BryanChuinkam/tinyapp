@@ -59,15 +59,27 @@ const passwordAndEmailMatch = (userEmail, password, users) => {
   return 'none';
 };
 
+const urlIDExist = (urlId, urlDatabase) => {
+  // returns true if urlID is found in urlDatabase
+  const objKeys = Object.keys(urlDatabase);
+  if (objKeys.includes(urlId)) {
+    return true;
+  }
+  return false;
+};
+
 // Affects USERS access
 app.get("/register", (req, res) => {
+  if (req.cookies.user_id) {
+    return res.redirect("/urls");
+  }
+
   const userObj = users[req.cookies.user_id];
   const templateVars = { user: userObj, urls: urlDatabase };
   res.render("registration", templateVars);
 });
 
 app.post("/register", (req, res) => {
-
   if (!validEmailAndPass(req.body.email, req.body.password)) {
     res.statusCode = 404;
     return res.send("Please enter valid email/password!!");
@@ -78,7 +90,7 @@ app.post("/register", (req, res) => {
   }
   const id = generateRandomString();
   users[id] = {
-    id,
+    id: id,
     email: req.body.email,
     password: req.body.password,
   };
@@ -89,6 +101,9 @@ app.post("/register", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
+  if (req.cookies.user_id) {
+    return res.redirect("/urls");
+  }
   const userObj = users[req.cookies.user_id];
   const templateVars = { user: userObj, urls: urlDatabase };
   res.render("login", templateVars);
@@ -131,19 +146,27 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
+  if (!req.cookies.user_id) {
+    return res.redirect("/login");
+  }
   const userObj = users[req.cookies.user_id];
   const templateVars = { user: userObj };
   res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
+  if (!urlIDExist(req.params.id, urlDatabase)) {
+    return res.send("Short URL ID entered could not be found in database.");
+  }
   const userObj = users[req.cookies.user_id];
   const templateVars = { idShort: req.params.id, longURL: urlDatabase[req.params.id], user: userObj };
   res.render("urls_show", templateVars);
-  // res.redirect(urlDatabase[req.params.id]);
 });
 
 app.post("/urls", (req, res) => {
+  if (!req.cookies.user_id) {
+    return res.resend("Need to be logged in to do this!!");
+  }
   const id = generateRandomString();
   urlDatabase[id] = req.body.longURL;
   res.redirect(`/urls/${id}`);
