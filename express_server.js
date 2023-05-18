@@ -1,4 +1,5 @@
 const express = require("express");
+const bcrypt = require("bcryptjs");
 const app = express();
 const PORT = 8080;
 const cookieParser = require('cookie-parser');
@@ -37,10 +38,12 @@ app.post("/register", (req, res) => {
     return res.send("Please user a different email!!");
   }
   const id = generateRandomString();
+  const hashedPassword = bcrypt.hashSync(req.body.password, 10);
+  console.log("hashedPassword: ", hashedPassword);
   usersDB[id] = {
     id: id,
     email: req.body.email,
-    password: req.body.password,
+    password: hashedPassword,
   };
 
   res.cookie('user_id', id);
@@ -66,6 +69,7 @@ app.post("/login", (req, res) => {
     res.statusCode = 403;
     return res.send("Please register before logging in!!!");
   }
+
   const id = passwordAndEmailMatch(req.body.email, req.body.password, usersDB);
 
   if (passwordAndEmailMatch(req.body.email, req.body.password, usersDB) === 'none') {
@@ -135,7 +139,7 @@ app.post("/urls", (req, res) => {
     return res.send("Need to be logged in to do this!!");
   }
   const id = generateRandomString();
-  urlDatabase[id].longURL = req.body.longURL;
+  urlDatabase[id] = {"longURL": req.body.longURL, "userID": req.cookies.user_id};
   res.redirect(`/urls/${id}`);
 });
 
@@ -169,7 +173,7 @@ app.post("/urls/:id/update", (req, res) => {
   if(!userUrlIds.includes(req.params.id)){
     return res.send("Can only access urls associated to your account!")
   }
-  
+
   urlDatabase[req.params.id].longURL = req.body.newURL;
   res.redirect(`/urls`);
 });
@@ -181,13 +185,6 @@ app.get("/", (req, res) => {
   res.send("hello!");
 });
 
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
-
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
