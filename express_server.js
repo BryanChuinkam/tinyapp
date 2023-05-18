@@ -32,31 +32,51 @@ const generateRandomString = () => {
 
 const userExist = (userEmail, users) => {
   // returns true if email has already been registered
-  for(const user in users){
-  	if(userEmail === users[user].email){
-    	return true; 
+  for (const user in users) {
+    if (userEmail === users[user].email) {
+      return true;
     }
   }
-	return false; 
-}
+  return false;
+};
 
-// Affects USERS
+const validEmailAndPass = (userEmail, password) => {
+  // Returns true of valid email and password are entered
+  // for now just ensures empty strings are not passed.
+  if (!userEmail || !password) {
+    return false;
+  }
+  return true;
+};
+
+const passwordAndEmailMatch = (userEmail, password, users) => {
+  // returns user id if password matches password that was registered with email
+  for (const user in users) {
+    if ((userEmail === users[user].email) && (password === users[user].password)) {
+      return users[user].id;
+    }
+  }
+  return 'none';
+};
+
+// Affects USERS access
 app.get("/register", (req, res) => {
-  const userObj = users[req.cookies.user_id]
+  const userObj = users[req.cookies.user_id];
   const templateVars = { user: userObj, urls: urlDatabase };
   res.render("registration", templateVars);
 });
 
 app.post("/register", (req, res) => {
-  if (!req.body.email || !req.body.password){
-    res.statusCode = 404; 
-    return res.send("Please enter valid email/password!!")
+
+  if (!validEmailAndPass(req.body.email, req.body.password)) {
+    res.statusCode = 404;
+    return res.send("Please enter valid email/password!!");
   }
-  if(userExist(req.body.email, users)){
-    res.statusCode = 400; 
-    return res.send("Please user a different email!!")
+  if (userExist(req.body.email, users)) {
+    res.statusCode = 400;
+    return res.send("Please user a different email!!");
   }
-  id = generateRandomString();
+  const id = generateRandomString();
   users[id] = {
     id,
     email: req.body.email,
@@ -65,17 +85,33 @@ app.post("/register", (req, res) => {
 
   res.cookie('user_id', id);
   return res.redirect("/urls");
- 
+
 });
 
 app.get("/login", (req, res) => {
-  const userObj = users[req.cookies.user_id]
+  const userObj = users[req.cookies.user_id];
   const templateVars = { user: userObj, urls: urlDatabase };
   res.render("login", templateVars);
 });
 
 app.post("/login", (req, res) => {
-  res.redirect(`/urls`);
+  if (!validEmailAndPass(req.body.email, req.body.password)) {
+    res.statusCode = 404;
+    return res.send("Please enter valid email/password!!");
+  }
+  if (!userExist(req.body.email, users)) {
+    res.statusCode = 403;
+    return res.send("Please register before logging in!!!");
+  }
+  const id = passwordAndEmailMatch(req.body.email, req.body.password, users);
+
+  if (passwordAndEmailMatch(req.body.email, req.body.password, users) === 'none') {
+    res.statusCode = 403;
+    return res.send("Something doesn't add up. Please try again!!!");
+
+  }
+  res.cookie('user_id', id);
+  return res.redirect("/urls");
 });
 
 app.post("/logout", (req, res) => {
@@ -87,22 +123,22 @@ app.post("/logout", (req, res) => {
 
 
 
-//Affects long/short URLS 
+//Affects long/short URLS
 app.get("/urls", (req, res) => {
-  console.log("users: ", users);
-  const userObj = users[req.cookies.user_id]
+  const userObj = users[req.cookies.user_id];
   const templateVars = { user: userObj, urls: urlDatabase };
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
-  const userObj = users[req.cookies.user_id]
+  const userObj = users[req.cookies.user_id];
   const templateVars = { user: userObj };
   res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
-  const templateVars = { idShort: req.params.id, longURL: urlDatabase[req.params.id], username: req.cookies["username"] };
+  const userObj = users[req.cookies.user_id];
+  const templateVars = { idShort: req.params.id, longURL: urlDatabase[req.params.id], user: userObj };
   res.render("urls_show", templateVars);
   // res.redirect(urlDatabase[req.params.id]);
 });
