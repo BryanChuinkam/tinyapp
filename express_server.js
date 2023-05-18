@@ -2,11 +2,9 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const app = express();
 const PORT = 8080;
-// const cookieParser = require('cookie-parser');
 const cookieSession = require("cookie-session");
 const morgan = require('morgan');
-const { urlDatabase, usersDB } = require("./databases");
-const { generateRandomString, userExist, validEmailAndPass, passwordAndEmailMatch, urlIDExist, urlsForUser } = require("./functions");
+const { generateRandomString, getUserByEmail, validEmailAndPass, passwordAndEmailMatch, urlIDExist, urlsForUser } = require("./helpers");
 
 
 //MIDDLEWARE
@@ -15,7 +13,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieSession({ name: 'session', keys: ["bryan"] }));
 app.use(morgan('dev'));
 
-
+//Databases
+const urlDatabase = {}; 
+const usersDB = {};
 
 
 // Affects usersDB access
@@ -34,19 +34,18 @@ app.post("/register", (req, res) => {
     res.statusCode = 404;
     return res.send("Please enter valid email/password!!");
   }
-  if (userExist(req.body.email, usersDB)) {
+  if (getUserByEmail(req.body.email, usersDB)) {
     res.statusCode = 400;
     return res.send("Please user a different email!!");
   }
   const id = generateRandomString();
   const hashedPassword = bcrypt.hashSync(req.body.password, 10);
-  console.log("hashedPassword: ", hashedPassword);
   usersDB[id] = {
     id: id,
     email: req.body.email,
     password: hashedPassword,
   };
-
+  console.log("usersDB: register", usersDB);
   req.session.user_id = id;
   return res.redirect("/urls");
 
@@ -66,7 +65,7 @@ app.post("/login", (req, res) => {
     res.statusCode = 404;
     return res.send("Please enter valid email/password!!");
   }
-  if (!userExist(req.body.email, usersDB)) {
+  if (!getUserByEmail(req.body.email, usersDB)) {
     res.statusCode = 403;
     return res.send("Please register before logging in!!!");
   }
@@ -78,7 +77,8 @@ app.post("/login", (req, res) => {
     return res.send("Something doesn't add up. Please try again!!!");
 
   }
-  res.cookie('user_id', id);
+  req.session.user_id = id;
+
   return res.redirect("/urls");
 });
 
@@ -93,6 +93,9 @@ app.post("/logout", (req, res) => {
 
 //Affects long/short URLS
 app.get("/urls", (req, res) => {
+  console.log("req.session.user_id /URLS: ", req.session.user_id);
+  console.log("usersDB /URLS:", usersDB);
+
   if (!req.session.user_id) {
     return res.send("Need to be logged in to do this!!");
   }
