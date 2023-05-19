@@ -17,6 +17,7 @@ app.use(morgan('dev'));
 const urlDatabase = {};
 const usersDB = {};
 
+//Routes
 
 app.get("/register", (req, res) => {
   if (req.session.user_id) {
@@ -97,7 +98,6 @@ app.post("/logout", (req, res) => {
 });
 
 
-//Routes
 app.get("/urls", (req, res) => {
   if (!req.session.user_id) {
     const message = "Need to be logged in to do this!!";
@@ -143,10 +143,36 @@ app.get("/urls/:id", (req, res) => {
     return res.render("error_page", templateVars);
   }
 
-
   const userObj = usersDB[req.session.user_id];
   const templateVars = { idShort: req.params.id, longURL: urlDatabase[req.params.id].longURL, user: userObj };
   res.render("urls_show", templateVars);
+});
+
+app.get("/u/:id", (req, res) => {
+  if (!req.session.user_id) {
+    const message = "Need to be logged in to do this!!";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
+  }
+
+  if (!urlIDExist(req.params.id, urlDatabase)) {
+    const message = "Short URL ID entered could not be found in database.";
+    const templateVars = { user: undefined, message };
+    return res.render("error_page", templateVars);
+  }
+
+  const userURLs = urlsForUser(req.session.user_id, urlDatabase);
+  const userUrlIds = Object.keys(userURLs);
+
+  if (!userUrlIds.includes(req.params.id)) {
+    const message = "Can only access urls associated to your account!";
+    const templateVars = { user: undefined, message };
+
+    return res.render("error_page", templateVars);
+  }
+
+
+  res.redirect(urlDatabase[req.params.id].longURL);
 });
 
 app.post("/urls", (req, res) => {
@@ -160,7 +186,7 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${id}`);
 });
 
-app.post("/urls/:id/overhaul", (req, res) => {
+app.post("/urls/:id/delete", (req, res) => {
   if (!req.session.user_id) {
     const message = "Need to be logged in to do this!!";
     const templateVars = { user: undefined, message };
@@ -176,9 +202,6 @@ app.post("/urls/:id/overhaul", (req, res) => {
     return res.render("error_page", templateVars);
   }
 
-  if (req.body.edit === "edit") {
-    return res.redirect(`/urls/${req.params.id}`);
-  }
   delete urlDatabase[req.params.id];
   res.redirect(`/urls`);
 });
@@ -205,6 +228,9 @@ app.post("/urls/:id/update", (req, res) => {
 
 
 app.get("/", (req, res) => {
+  if (req.session.user_id) {
+    return res.redirect(`/urls`);
+  }
   return res.render("home", { user: undefined });
 });
 
